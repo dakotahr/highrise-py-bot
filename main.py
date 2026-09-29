@@ -55,6 +55,7 @@ class Bot(BaseBot):
         self.bot_pos_x = 0
         self.bot_pos_y = 0
         self.bot_pos_z = 0
+        self.anuncios_activos = True
 
     # Tarea repetitiva para anuncios y seguimiento automático
     async def bucle_segundo_plano(self):
@@ -75,12 +76,15 @@ class Bot(BaseBot):
                 except Exception as e:
                     print(f"Error al seguir: {e}")
 
-            # 2. Sistema de anuncios automáticos (Cada 5 minutos = 300 segundos)
-            contador_anuncio += 5
-            if contador_anuncio >= 300:
-                contador_anuncio = 0
-                frase = random.choice(FRASES_ANUNCIOS)
-                await self.highrise.chat(frase)
+            # 2. Sistema de anuncios automáticos (Modificado con el interruptor)
+            if self.anuncios_activos:
+                contador_anuncio += 5
+                if contador_anuncio >= 300: # Cada 5 minutos
+                    contador_anuncio = 0
+                    frase = random.choice(FRASES_ANUNCIOS)
+                    await self.highrise.chat(frase)
+            else:
+                contador_anuncio = 0 # Si los apagás, el reloj se congela en cero
 
     async def on_start(self, session_metadata, room_permissions=None) -> None:
         print("¡BotiNera ingresó a la sala con éxito!")
@@ -112,6 +116,15 @@ class Bot(BaseBot):
         # --- CONTADOR DE VISITAS ---
         elif msg == "!visitas":
             await self.highrise.chat(f"📊 Esta sala ha recibido {self.contador_visitas} visitas desde que estoy online.")
+
+         # --- CONTROL DE ANUNCIOS (Solo Dueño) ---
+        elif msg == "!anuncios off" and user.username.lower() == "iamdakota":
+            self.anuncios_activos = False
+            await self.highrise.chat("🔇 Anuncios automáticos desactivados.")
+            
+        elif msg == "!anuncios on" and user.username.lower() == "iamdakota":
+            self.anuncios_activos = True
+            await self.highrise.chat("🔊 Anuncios automáticos activados.")
 
         # --- SISTEMA DE CLONACIÓN DE ROPA EN MEMORIA ---
         elif msg == "!cloname 1":
@@ -151,7 +164,6 @@ class Bot(BaseBot):
             except Exception as e:
                 print(f"Error clonar: {e}")
                 await self.highrise.send_whisper(user.id, "❌ No pude clonar tu ropa. ¡Usa prendas básicas de fábrica!")
-
 
         # --- DETECTAR CUALQUIER EMOTE INTELIGENTE ---
         elif msg.startswith("!emote "):
