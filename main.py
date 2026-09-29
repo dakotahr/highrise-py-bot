@@ -118,13 +118,13 @@ class Bot(BaseBot):
             await self.highrise.chat(f"📊 Esta sala ha recibido {self.contador_visitas} visitas desde que estoy online.")
 
          # --- CONTROL DE ANUNCIOS (Solo Dueño) ---
-        elif msg == "!anuncios off" and user.username.lower() == "iamdakota":
-            self.anuncios_activos = False
-            await self.highrise.chat("🔇 Anuncios automáticos desactivados.")
-            
-        elif msg == "!anuncios on" and user.username.lower() == "iamdakota":
-            self.anuncios_activos = True
-            await self.highrise.chat("🔊 Anuncios automáticos activados.")
+        elif msg == "!anuncios off" and user.username.lower() == "iamdakota":
+            self.anuncios_activos = False
+            await self.highrise.chat("🔇 Anuncios automáticos desactivados.")
+            
+        elif msg == "!anuncios on" and user.username.lower() == "iamdakota":
+            self.anuncios_activos = True
+            await self.highrise.chat("🔊 Anuncios automáticos activados.")
 
         # --- SISTEMA DE CLONACIÓN DE ROPA EN MEMORIA ---
         elif msg == "!cloname 1":
