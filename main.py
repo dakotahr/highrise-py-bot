@@ -113,6 +113,46 @@ class Bot(BaseBot):
         elif msg == "!visitas":
             await self.highrise.chat(f"📊 Esta sala ha recibido {self.contador_visitas} visitas desde que estoy online.")
 
+        # --- SISTEMA DE CLONACIÓN DE ROPA EN MEMORIA ---
+        elif msg == "!cloname 1":
+            if hasattr(self, 'outfit_fabrica') and self.outfit_fabrica:
+                await self.highrise.chat("👕 Volviendo al outfit 1 (Ropa de fábrica)...")
+                try:
+                    await self.highrise.set_outfit(self.outfit_fabrica)
+                except Exception as e:
+                    print(f"Error outfit 1: {e}")
+            else:
+                await self.highrise.send_whisper(user.id, "Aún no tengo guardado mi outfit de fábrica. Usa !cloname solo primero.")
+
+        elif msg == "!cloname 2":
+            if hasattr(self, 'outfit_clonado') and self.outfit_clonado:
+                await self.highrise.chat("✨ Cambiando al outfit 2 (Clonado)...")
+                try:
+                    await self.highrise.set_outfit(self.outfit_clonado)
+                except Exception as e:
+                    print(f"Error outfit 2: {e}")
+            else:
+                await self.highrise.send_whisper(user.id, "No hay ningún outfit clonado guardado. Usa !cloname solo primero.")
+
+        elif msg == "!cloname":
+            await self.highrise.chat("🤖 Analizando tu outfit para clonarlo...")
+            try:
+                if not hasattr(self, 'outfit_fabrica') or self.outfit_fabrica is None:
+                    resultado_bot = await self.highrise.get_my_outfit()
+                    self.outfit_fabrica = resultado_bot.outfit
+                    print("✅ Outfit de fábrica guardado.")
+
+                resultado_usuario = await self.highrise.get_user_outfit(user.id)
+                tu_ropa = resultado_usuario.outfit
+                self.outfit_clonado = tu_ropa
+
+                await self.highrise.set_outfit(tu_ropa)
+                await self.highrise.chat("✨ ¡Clonación exitosa! Guardado como Outfit 2. Usa '!cloname 1' para volver a fábrica.")
+            except Exception as e:
+                print(f"Error clonar: {e}")
+                await self.highrise.send_whisper(user.id, "❌ No pude clonar tu ropa. ¡Usa prendas básicas de fábrica!")
+
+
         # --- DETECTAR CUALQUIER EMOTE INTELIGENTE ---
         elif msg.startswith("!emote "):
             emote_solicitado = message.replace("!emote ", "").strip()
