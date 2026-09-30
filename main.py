@@ -147,7 +147,7 @@ class Bot(BaseBot):
         try:
             while True:
                 await self.highrise.send_emote(emote, user_id)
-                await asyncio.sleep(4)
+                await asyncio.sleep(7)
         except asyncio.CancelledError:
             pass
         except Exception as e:
@@ -158,7 +158,7 @@ class Bot(BaseBot):
         try:
             while True:
                 await self.highrise.send_emote(emote)
-                await asyncio.sleep(4)
+                await asyncio.sleep(7)
         except asyncio.CancelledError:
             pass
         except Exception as e:
@@ -168,7 +168,7 @@ class Bot(BaseBot):
         try:
             while True:
                 await self.highrise.send_emote(emote, user_id)
-                await asyncio.sleep(4)
+                await asyncio.sleep(7)
         except asyncio.CancelledError:
             pass
         except Exception as e:
