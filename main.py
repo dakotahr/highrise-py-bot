@@ -33,14 +33,90 @@ FRASES_ANUNCIOS = [
     "🌈 'No cuentes los días, haz que los días cuenten.' 🌈"
 ]
 
-# Lista de emotes para el comando !dance
-DANCE_EMOTES = ['emote-kiss', 'emote-no', 'emote-sad', 'emote-yes', 'emote-laughing', 'emote-hello', 'emote-wave', 'emote-shy', 'emote-tired', 'emoji-angry', 'idle-loop-sitfloor', 'emoji-thumbsup', 'emote-lust', 'emoji-cursing', 'emote-greedy', 'emoji-flex', 'emoji-gagging', 'emoji-celebrate', 'dance-macarena', 'dance-tiktok8', 'dance-blackpink', 'emote-model', 'dance-tiktok2', 'dance-pennywise', 'emote-bow', 'dance-russian', 'emote-curtsy', 'emote-snowball', 'emote-hot', 'emote-snowangel', 'emote-charging', 'dance-shoppingcart', 'emote-confused', 'idle-enthusiastic', 'emote-telekinesis', 'emote-float', 'emote-teleporting', 'emote-swordfight', 'emote-maniac', 'emote-energyball', 'emote-snake', 'idle-singing', 'emote-frog', 'emote-superpose', 'emote-cute', 'dance-tiktok9', 'dance-weird', 'dance-tiktok10', 'emote-pose7', 'emote-pose8', 'idle-dance-casual', 'emote-pose1', 'emote-pose3', 'emote-pose5', 'emote-cutey', 'dance-zombie', 'dance-duckwalk', 'dance-smoothwalk', 'dance-touch', 'dance-hipshake', 'dance-blackpink', 'dance-cheerleader', 'dance-anime', 'dance-weird', 'emote-gravity', 'sit-relaxed', 'emote-heartfingers', 'emote-tapdance', 'emote-adoringfans']
-
 TRIVIAS = [
     {"p": "¿Cuál es el planeta más cercano al Sol?", "o": "A) Marte | B) Mercurio | C) Venus", "r": "b"},
     {"p": "¿Cuántos minutos tiene una hora?", "o": "A) 50 | B) 100 | C) 60", "r": "c"},
     {"p": "¿Qué gas necesitamos para respirar?", "o": "A) Oxígeno | B) Hidrógeno | C) Nitrógeno", "r": "a"},
     {"p": "¿Cuál es el océano más grande del mundo?", "o": "A) Atlántico | B) Pacífico | C) Índico", "r": "b"}
+]
+
+
+# ==========================================
+# LISTA DE EMOTES PARA !DANCE
+# Puedes editar esta lista en el futuro.
+# El número corresponde a la posición del emote.
+# ==========================================
+
+DANCE_EMOTES = [
+    "emote-kiss",
+    "emote-no",
+    "emote-sad",
+    "emote-yes",
+    "emote-laughing",
+    "emote-hello",
+    "emote-wave",
+    "emote-shy",
+    "emote-tired",
+    "emoji-angry",
+    "idle-loop-sitfloor",
+    "emoji-thumbsup",
+    "emote-lust",
+    "emoji-cursing",
+    "emote-greedy",
+    "emoji-flex",
+    "emoji-gagging",
+    "emoji-celebrate",
+    "dance-macarena",
+    "dance-tiktok8",
+    "dance-blackpink",
+    "emote-model",
+    "dance-tiktok2",
+    "dance-pennywise",
+    "emote-bow",
+    "dance-russian",
+    "emote-curtsy",
+    "emote-snowball",
+    "emote-hot",
+    "emote-snowangel",
+    "emote-charging",
+    "dance-shoppingcart",
+    "emote-confused",
+    "idle-enthusiastic",
+    "emote-telekinesis",
+    "emote-float",
+    "emote-teleporting",
+    "emote-swordfight",
+    "emote-maniac",
+    "emote-energyball",
+    "emote-snake",
+    "idle-singing",
+    "emote-frog",
+    "emote-superpose",
+    "emote-cute",
+    "dance-tiktok9",
+    "dance-weird",
+    "dance-tiktok10",
+    "emote-pose7",
+    "emote-pose8",
+    "idle-dance-casual",
+    "emote-pose1",
+    "emote-pose3",
+    "emote-pose5",
+    "emote-cutey",
+    "dance-zombie",
+    "dance-duckwalk",
+    "dance-smoothwalk",
+    "dance-touch",
+    "dance-hipshake",
+    "dance-blackpink",
+    "dance-cheerleader",
+    "dance-anime",
+    "dance-weird",
+    "emote-gravity",
+    "sit-relaxed",
+    "emote-heartfingers",
+    "emote-tapdance",
+    "emote-adoringfans",
 ]
 
 
@@ -63,7 +139,7 @@ class Bot(BaseBot):
         # Tareas de emotes en bucle
         self.me_emote_tasks = {}
         self.bot_emote_task = None
-        self.dance_task = None
+        self.dance_emote_tasks = {}
 
     # Tarea repetitiva para anuncios y seguimiento automático
     # Bucle de emote para usuarios con !me
@@ -88,17 +164,18 @@ class Bot(BaseBot):
         except Exception as e:
             print(f"Error en bucle !emote: {e}")
 
-    # Bucle para !dance
-    async def bucle_dance(self):
+    async def bucle_dance(self, user_id, emote):
         try:
             while True:
-                emote = random.choice(DANCE_EMOTES)
-                await self.highrise.send_emote(emote)
+                await self.highrise.send_emote(emote, user_id)
                 await asyncio.sleep(4)
         except asyncio.CancelledError:
             pass
         except Exception as e:
             print(f"Error en bucle !dance: {e}")
+        finally:
+            if self.dance_emote_tasks.get(user_id) is asyncio.current_task():
+                del self.dance_emote_tasks[user_id]
 
     async def bucle_segundo_plano(self):
         contador_anuncio = 0
@@ -209,46 +286,85 @@ class Bot(BaseBot):
 
         # --- COMANDO !DANCE ---
         #
-        # !dance
-        #       -> ejecuta un emote aleatorio de la lista
+        # !dance 2
+        #       -> ejecuta el emote numero 2 una vez
         #
-        # !dance loop
-        #       -> repite emotes aleatorios
+        # !dance 2 loop
+        #       -> repite el emote numero 2 sobre el usuario
         #
         # !dance parar
-        #       -> detiene el loop
+        #       -> detiene el loop de ese usuario
 
-        elif msg == "!dance":
-            emote = random.choice(DANCE_EMOTES)
+        elif msg.startswith("!dance"):
+
+            partes = message.strip().split()
+
+            if len(partes) == 2 and partes[1].lower() == "parar":
+                tarea = self.dance_emote_tasks.get(user.id)
+
+                if tarea:
+                    tarea.cancel()
+                    await self.highrise.chat(
+                        f"🛑 Dejé de repetir el dance para @{user.username}."
+                    )
+                else:
+                    await self.highrise.send_whisper(
+                        user.id,
+                        "ℹ️ No tienes ningún dance en bucle."
+                    )
+                return
+
+            if len(partes) < 2:
+                await self.highrise.send_whisper(
+                    user.id,
+                    f"Uso: !dance NUMERO o !dance NUMERO loop. "
+                    f"Hay {len(DANCE_EMOTES)} emotes disponibles."
+                )
+                return
+
             try:
-                await self.highrise.send_emote(emote)
+                numero = int(partes[1])
+            except ValueError:
+                await self.highrise.send_whisper(
+                    user.id,
+                    f"❌ Debes usar un número del 1 al {len(DANCE_EMOTES)}."
+                )
+                return
+
+            if numero < 1 or numero > len(DANCE_EMOTES):
+                await self.highrise.send_whisper(
+                    user.id,
+                    f"❌ El número debe estar entre 1 y {len(DANCE_EMOTES)}."
+                )
+                return
+
+            emote_solicitado = DANCE_EMOTES[numero - 1]
+
+            if len(partes) >= 3 and partes[2].lower() == "loop":
+                tarea_anterior = self.dance_emote_tasks.get(user.id)
+
+                if tarea_anterior:
+                    tarea_anterior.cancel()
+
+                tarea = asyncio.create_task(
+                    self.bucle_dance(user.id, emote_solicitado)
+                )
+
+                self.dance_emote_tasks[user.id] = tarea
+
+                await self.highrise.chat(
+                    f"🔁 @{user.username} está haciendo "
+                    f"{emote_solicitado} (#{numero}) en bucle."
+                )
+                return
+
+            try:
+                await self.highrise.send_emote(
+                    emote_solicitado,
+                    user.id
+                )
             except Exception as e:
                 print(f"Error en comando !dance: {e}")
-
-        elif msg == "!dance loop":
-            if self.dance_task:
-                self.dance_task.cancel()
-
-            self.dance_task = asyncio.create_task(
-                self.bucle_dance()
-            )
-
-            await self.highrise.chat(
-                "💃 ¡Dance en bucle activado!"
-            )
-
-        elif msg == "!dance parar":
-            if self.dance_task:
-                self.dance_task.cancel()
-                self.dance_task = None
-
-                await self.highrise.chat(
-                    "🛑 ¡Dance en bucle detenido!"
-                )
-            else:
-                await self.highrise.chat(
-                    "ℹ️ No hay un dance en bucle activo."
-                )
 
         # --- DETECTAR CUALQUIER EMOTE INTELIGENTE ---
         #
