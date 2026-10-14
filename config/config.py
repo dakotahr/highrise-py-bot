@@ -1,9 +1,13 @@
+
+import os
+
 prefix = '/'
 
-# Reemplazamos por tu ID de World actual
-room = '69a113aed41925285a28e3cd'
-token = '9adb3a9add8ff1734b659dcef898469a406fee6d9c1a796bd133c6b003519c0b'
+# Credenciales obtenidas desde variables de entorno
+room = os.getenv('HIGHRISE_ROOM_ID', '').strip()
+token = os.getenv('HIGHRISE_API_TOKEN', '').strip()
 
+# Datos del bot
 botID = '68654c84f77cce8a0c95eb1b'
 botName = 'BotiNera'
 ownerName = 'IamDakota'
@@ -14,3 +18,14 @@ coordinates = {
     'z': 0,
     'facing': 'FrontRight'
 }
+
+# Comprobar que las credenciales estén configuradas
+if not room:
+    raise RuntimeError(
+        'Falta configurar la variable HIGHRISE_ROOM_ID.'
+    )
+
+if not token:
+    raise RuntimeError(
+        'Falta configurar la variable HIGHRISE_API_TOKEN.'
+    )
