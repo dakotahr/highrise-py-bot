@@ -2,7 +2,6 @@ import threading
 import os
 import asyncio
 import random
-import difflib
 from flask import Flask
 from highrise import BaseBot
 from highrise.models import Position
@@ -143,89 +142,16 @@ class Bot(BaseBot):
         self.dance_emote_tasks = {}
 
     # Tarea repetitiva para anuncios y seguimiento automático
-    # Envía un emote. Devuelve (True, None) si funcionó o (False, texto_del_error).
-    # El SDK lanza highrise.ResponseError cuando Highrise rechaza el emote;
-    # también se cubre el caso de que devuelva un objeto Error.
-    async def intentar_emote(self, emote, user_id=None):
-        try:
-            if user_id:
-                resp = await self.highrise.send_emote(emote, user_id)
-            else:
-                resp = await self.highrise.send_emote(emote)
-        except Exception as e:
-            print(f"[emote] '{emote}' rechazado: {type(e).__name__}: {e}")
-            return False, str(e)
-        if resp is not None and type(resp).__name__ == "Error":
-            print(f"[emote] '{emote}' rechazado: {resp}")
-            return False, str(resp)
-        return True, None
-
-    # Consulta la base de datos de Highrise (Web API) para saber si el ID existe.
-    # Devuelve "existe", "no_existe" o "desconocido" (si la consulta misma falló).
-    async def emote_existe_en_highrise(self, emote):
-        # Los emotes de tu lista ya se sabe que son reales
-        if emote in DANCE_EMOTES:
-            return "existe"
-        try:
-            resp = await self.webapi.get_item(item_id=emote)
-        except Exception as e:
-            resp = e
-
-        if isinstance(resp, Exception):
-            texto = str(resp).lower()
-            print(f"[emote] Web API get_item('{emote}') -> {type(resp).__name__}: {resp}")
-            if "404" in texto or "not found" in texto or "not_found" in texto:
-                return "no_existe"
-            return "desconocido"
-
-        item = getattr(resp, "item", None)
-        if item is None:
-            return "no_existe"
-
-        categoria = getattr(item.category, "value", item.category)
-        if str(categoria).lower() != "emote":
-            # El ID existe en Highrise, pero es otra cosa (ropa, etc.), no un emote
-            return "no_existe"
-        return "existe"
-
-    # Arma el mensaje correcto según el motivo por el que falló el emote
-    async def mensaje_error_emote(self, emote):
-        estado = await self.emote_existe_en_highrise(emote)
-
-        if estado == "no_existe":
-            texto = f"❌ El emote '{emote}' no existe o está mal escrito. Revisa el nombre."
-            sugerencias = difflib.get_close_matches(emote, DANCE_EMOTES, n=3, cutoff=0.6)
-            if sugerencias:
-                texto += " ¿Quisiste decir: " + ", ".join(sugerencias) + "?"
-            return texto
-
-        if estado == "existe":
-            return (
-                f"⚠️ El emote '{emote}' existe, pero no se puede ejecutar en tu avatar "
-                f"(no lo tienes o no tienes permiso para usarlo)."
-            )
-
-        return (
-            f"⚠️ No pude ejecutar '{emote}'. Revisa que el nombre esté bien escrito; "
-            f"si lo está, puede que no lo tengas."
-        )
-
     # Bucle de emote para usuarios con !me
-    # (el primer emote ya se envió y validó antes de crear el bucle)
     async def bucle_me_emote(self, user_id, emote):
         try:
             while True:
+                await self.highrise.send_emote(emote, user_id)
                 await asyncio.sleep(12)
-                ok, _ = await self.intentar_emote(emote, user_id)
-                if not ok:
-                    break
         except asyncio.CancelledError:
             pass
         except Exception as e:
             print(f"Error en bucle !me: {e}")
-        finally:
-            if self.me_emote_tasks.get(user_id) is asyncio.current_task():
-                del self.me_emote_tasks[user_id]
 
     # Bucle de emote para el bot con !emote
     async def bucle_bot_emote(self, emote):
@@ -504,18 +430,11 @@ class Bot(BaseBot):
         # !me parar
         #       -> detiene el loop de ese usuario
 
-        elif msg == "!me" or msg.startswith("!me "):
+        elif msg.startswith("!me "):
             partes = message.strip().split()
 
-            if len(partes) < 2:
-                await self.highrise.send_whisper(
-                    user.id,
-                    "Uso: !me ID, !me ID loop o !me parar"
-                )
-                return
-
             if len(partes) == 2 and partes[1].lower() == "parar":
-                tarea = self.me_emote_tasks.pop(user.id, None)
+                tarea = self.me_emote_tasks.get(user.id)
 
                 if tarea:
                     tarea.cancel()
@@ -528,18 +447,10 @@ class Bot(BaseBot):
                     )
                 return
 
-            emote_solicitado = partes[1].lower()
-            es_loop = len(partes) >= 3 and partes[2].lower() == "loop"
+            if len(partes) >= 3 and partes[2].lower() == "loop":
+                emote_solicitado = partes[1]
 
-            # Se envía una vez; si Highrise lo rechaza se explica el motivo
-            ok, _ = await self.intentar_emote(emote_solicitado, user.id)
-            if not ok:
-                mensaje = await self.mensaje_error_emote(emote_solicitado)
-                await self.highrise.send_whisper(user.id, mensaje)
-                return
-
-            if es_loop:
-                tarea_anterior = self.me_emote_tasks.pop(user.id, None)
+                tarea_anterior = self.me_emote_tasks.get(user.id)
                 if tarea_anterior:
                     tarea_anterior.cancel()
 
@@ -551,6 +462,21 @@ class Bot(BaseBot):
                 await self.highrise.chat(
                     f"🔁 @{user.username} ahora tiene {emote_solicitado} en bucle."
                 )
+                return
+
+            if len(partes) < 2:
+                await self.highrise.send_whisper(
+                    user.id,
+                    "Uso: !me ID o !me ID loop"
+                )
+                return
+
+            emote_solicitado = partes[1]
+
+            try:
+                await self.highrise.send_emote(emote_solicitado, user.id)
+            except Exception as e:
+                print(f"Error en comando !me: {e}")
 
         # --- COMANDO NUEVO: HACER BAILAR A TODOS EN LA SALA (Solo Dueño) ---
         elif msg.startswith("!todos ") and user.username.lower() == "iamdakota":
