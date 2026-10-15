@@ -146,12 +146,24 @@ class Bot(BaseBot):
     async def bucle_me_emote(self, user_id, emote):
         try:
             while True:
-                await self.highrise.send_emote(emote, user_id)
+                # El primer emote ya se comprueba antes de iniciar el bucle.
                 await asyncio.sleep(12)
+                await self.highrise.send_emote(emote, user_id)
         except asyncio.CancelledError:
             pass
         except Exception as e:
             print(f"Error en bucle !me: {e}")
+            try:
+                await self.highrise.send_whisper(
+                    user_id,
+                    f"❌ El emote '{emote}' no se encuentra o no es válido. "
+                    "Revisa el ID técnico."
+                )
+            except Exception:
+                pass
+        finally:
+            if self.me_emote_tasks.get(user_id) is asyncio.current_task():
+                del self.me_emote_tasks[user_id]
 
     # Bucle de emote para el bot con !emote
     async def bucle_bot_emote(self, emote):
@@ -450,6 +462,18 @@ class Bot(BaseBot):
             if len(partes) >= 3 and partes[2].lower() == "loop":
                 emote_solicitado = partes[1]
 
+                # Comprobamos el emote antes de anunciar o iniciar el bucle.
+                try:
+                    await self.highrise.send_emote(emote_solicitado, user.id)
+                except Exception as e:
+                    print(f"Error en comando !me loop: {e}")
+                    await self.highrise.send_whisper(
+                        user.id,
+                        f"❌ El emote '{emote_solicitado}' no se encuentra o no es válido. "
+                        "Revisa el ID técnico."
+                    )
+                    return
+
                 tarea_anterior = self.me_emote_tasks.get(user.id)
                 if tarea_anterior:
                     tarea_anterior.cancel()
@@ -477,6 +501,11 @@ class Bot(BaseBot):
                 await self.highrise.send_emote(emote_solicitado, user.id)
             except Exception as e:
                 print(f"Error en comando !me: {e}")
+                await self.highrise.send_whisper(
+                    user.id,
+                    f"❌ El emote '{emote_solicitado}' no se encuentra o no es válido. "
+                    "Revisa el ID técnico."
+                )
 
         # --- COMANDO NUEVO: HACER BAILAR A TODOS EN LA SALA (Solo Dueño) ---
         elif msg.startswith("!todos ") and user.username.lower() == "iamdakota":
